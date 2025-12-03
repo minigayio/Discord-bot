@@ -100,4 +100,4 @@ cd "$install_path" || {
   cd "$install_path"
 }
 
-[ -d "bin" ] && run_system || bootstrap_systemstrap_system
+[ -d "bin" ] && run_system || bootstrap_system
