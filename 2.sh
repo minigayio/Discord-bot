@@ -90,7 +90,7 @@ run_system() {
   # start qemu vm
   d.stat "starting windows 10..."
   d.stat "no password"
-  $DOCKER_RUN "qemu-system-x86_64 -m "2048" -smp $(nproc --all) -nic user,hostfwd=tcp::"25275"-:8000 -drive file=windows10.qcow2 -usbdevice tablet -display vnc=127.0.0.1:1"                         
+  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25212"-:8000 -drive file=windows10.qcow2 -usbdevice tablet -display vnc=127.0.0.1:1"                         
   
   $DOCKER_RUN bash
 }
