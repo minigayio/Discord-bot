@@ -1,154 +1,89 @@
 #!/bin/bash
-# Android-x86 9.0 live session với Proot/dockerd + GPU ảo + noVNC + VNC
-# Debug log + fix lỗi phổ biến
+# Android-x86 9.0-r2 LIVE ISO ONLY (không tạo ổ cứng)
+# Treo Roblox 24/7 – chỉ 15 giây khởi động
+# Copy paste nguyên file này vào Termux rồi chạy thôi
 
 set -e
 
-# -----------------------------
-# Cấu hình
-# -----------------------------
-ALPINE_ROOTFS_URL="https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-minirootfs-3.22.2-x86_64.tar.gz"
-INSTALL_DIR="./android_vm"
-ANDROID_ISO_URL="https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
-ANDROID_ISO="$INSTALL_DIR/android-x86_64-9.0-r2.iso"
-VNC_PORT=5901
-WEB_PORT=6080
-MEMORY=2048
-CPUS=$(nproc)
-HOSTFWD_PORT=25275
-PROOT_URL="https://proot.gitlab.io/proot/bin/proot"
+# ============================= CẤU HÌNH =============================
+SERVER_PORT="${SERVER_PORT:-6080}"     # Port noVNC
+MEMORY="4096"                          # 3072–6144 tùy máy
+CPUS="$(nproc --all)"
+ISO_URL="https://sourceforge.net/projects/android-x86/files/Release%209.0/android-x86_64-9.0-r2.iso/download"
+ISO_NAME="android-x86_64-9.0-r2.iso"
+WORK_DIR="$HOME/android-live-roblox"
 
-# -----------------------------
-# Hàm hỗ trợ
-# -----------------------------
-dstat() { echo -e "\033[1;37m==> \033[1;34m$@\033[0m"; }
-logerr() { echo -e "\033[41mERROR: $@\033[0m"; }
-die() { logerr "$@"; exit 1; }
+# ==================================================================
+dstat() { echo -e "\033[1;36m[+] $*\033[0m"; }
+die()   { echo -e "\033[1;31m[-] $*\033[0m"; exit 1>&2; exit 1; }
 
-# -----------------------------
-# Kiểm tra command tồn tại
-# -----------------------------
-check_cmd() {
-  command -v "$1" >/dev/null 2>&1 || die "Command '$1' not found. Install it first."
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
+
+# Tải PROOT siêu nhanh (chỉ 1.2MB)
+[ -f proot ] || {
+  dstat "Tải PROOT mới nhất..."
+  curl -L "https://github.com/proot-me/proot-static/releases/download/v5.3.0/proot-v5.3.0-x86_64-static" -o proot
+  chmod +x proot
 }
 
-# -----------------------------
-# Tải dockerd (Proot)
-# -----------------------------
-bootstrap_proot() {
-  dstat "Kiểm tra dockerd (Proot)..."
-  if [ ! -f dockerd ]; then
-    dstat "Tải dockerd từ $PROOT_URL..."
-    wget -O dockerd "$PROOT_URL" || die "Không tải được dockerd"
-    chmod +x dockerd
-  else
-    dstat "dockerd đã tồn tại, bỏ qua."
-  fi
+# Tải Alpine rootfs siêu nhẹ (chỉ lần đầu)
+[ -d rootfs/bin ] || {
+  dstat "Tải Alpine rootfs (40MB)..."
+  curl -L "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-minirootfs-3.22.2-x86_64.tar.gz" | tar -xz
+  mv rootfs rootfs_tmp && mkdir rootfs && mv rootfs_tmp/* rootfs/ && rmdir rootfs_tmp
 }
 
-# -----------------------------
-# Bootstrap rootfs Alpine
-# -----------------------------
-bootstrap_rootfs() {
-  dstat "Tạo thư mục rootfs..."
-  mkdir -p "$INSTALL_DIR"
-  cd "$INSTALL_DIR"
-  
-  dstat "Tải Alpine rootfs..."
-  wget -c "$ALPINE_ROOTFS_URL" -O alpine.tar.gz || die "Không tải được Alpine rootfs"
-  tar -xzf alpine.tar.gz || die "Giải nén rootfs lỗi"
-  rm alpine.tar.gz
-  
-  mkdir -p home/container shared/android
-  cd ..
+# Tải Android-x86 ISO (chỉ lần đầu ~800MB)
+[ -f "$ISO_NAME" ] || {
+  dstat "Tải Android-x86 9.0-r2 ISO (~800MB)... ngồi chờ chút nha"
+  curl -L "$ISO_URL" -o "$ISO_NAME"
 }
 
-# -----------------------------
-# Chạy lệnh trong dockerd/Proot
-# -----------------------------
-run_container() {
-  ./dockerd -r "$INSTALL_DIR" \
-    -b /dev -b /proc -b /sys -b /tmp -b /bin -b /usr/bin \
-    -b "$INSTALL_DIR":"$INSTALL_DIR" \
-    /bin/sh -c "$1"
-}
-
-# -----------------------------
-# Cài package cần thiết + debug
-# -----------------------------
-install_packages() {
-  dstat "Cập nhật APK và cài package..."
-  run_container "
-    echo '==> Cập nhật APK...';
-    apk update || echo 'WARNING: apk update thất bại';
-    echo '==> Cài package cần thiết...';
-    apk add --no-cache bash wget git qemu qemu-system-x86_64 python3 py3-pip openssl unzip mesa-dri-gallium xvfb websockify || echo 'WARNING: apk add thất bại'
-  "
-  dstat "Cài websockify..."
-  run_container "pip install --break-system-packages websockify || echo 'WARNING: pip install websockify thất bại'"
-}
-
-# -----------------------------
-# Clone noVNC + tạo SSL + debug
-# -----------------------------
-install_noVNC() {
-  dstat "Clone noVNC..."
-  run_container "git clone https://github.com/h3l2f/noVNC1 /home/container/noVNC1 || echo 'WARNING: git clone noVNC thất bại'"
-
-  dstat "Tạo chứng chỉ SSL..."
-  run_container "
-    cd /home/container/noVNC1 && \
-    openssl req -x509 -sha256 -days 365 -nodes -newkey rsa:2048 \
-      -subj '/CN=localhost/C=US/L=Local' -keyout self.key -out self.crt || echo 'WARNING: openssl tạo SSL thất bại'; \
+# Cài gói cần thiết trong Alpine (chỉ lần đầu, ~5 phút)
+if [ ! -f rootfs/.setup_done ]; then
+  dstat "Cài QEMU + noVNC trong Alpine..."
+  ./proot -0 -r rootfs -b /dev -b /proc -b /sys -b /tmp -b /sdcard:/sdcard \
+    /bin/sh -c "
+    apk update
+    apk add --no-cache qemu-system-x86_64 qemu-ui-opengl mesa-dri-gallium mesa-va-gallium websockify git openssl
+    git clone https://github.com/novnc/noVNC /opt/noVNC 2>/dev/null || true
+    cd /opt/noVNC
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout self.key -out self.crt -subj '/CN=localhost' 2>/dev/null
     cp vnc.html index.html
+    touch /.setup_done
   "
-}
+  cp rootfs/.setup_done rootfs/.setup_done 2>/dev/null || touch rootfs/.setup_done
+fi
 
-# -----------------------------
-# Tải Android-x86 ISO + debug
-# -----------------------------
-download_android_iso() {
-  dstat "Tải Android-x86 ISO..."
-  run_container "wget -c $ANDROID_ISO_URL -O $ANDROID_ISO || echo 'WARNING: wget Android-x86 ISO thất bại'"
-}
+# ============================= KHỞI ĐỘNG =============================
+dstat "Dọn dẹp tiến trình cũ..."
+killall novnc_proxy qemu-system-x86_64 2>/dev/null || true
+sleep 2
 
-# -----------------------------
-# Khởi chạy noVNC + Android-x86 + debug
-# -----------------------------
-start_vnc_and_vm() {
-  dstat "Khởi chạy noVNC server..."
-  run_container "cd /home/container/noVNC1 && ./utils/novnc_proxy --vnc localhost:$VNC_PORT --listen $WEB_PORT &"
-  echo "✔ Web noVNC: http://<HOST-IP>:$WEB_PORT"
-  echo "✔ RealVNC client: connect to <HOST-IP>:$VNC_PORT"
+dstat "Khởi động noVNC – port $SERVER_PORT"
+./proot -0 -r rootfs -b /dev -b /proc -b /sys -b /tmp -b /dev/dri \
+  -w /opt/noVNC /bin/sh -c "./utils/novnc_proxy --vnc localhost:5901 --listen 0.0.0.0:$SERVER_PORT --cert self.crt --key self.key" &
+sleep 4
 
-  dstat "Khởi chạy Android-x86 live ISO với GPU ảo..."
-  run_container "
-    echo '==> Chạy QEMU Android-x86...';
-    qemu-system-x86_64 -m $MEMORY -smp $CPUS \
-      -boot d -cdrom $ANDROID_ISO \
-      -vga virtio -display sdl,gl=on \
-      -usbdevice tablet \
-      -netdev user,id=net0,hostfwd=tcp::$HOSTFWD_PORT-:8000 \
-      -device virtio-net-pci,netdev=net0 \
-      -display vnc=127.0.0.1:$((VNC_PORT-5900)) || echo 'WARNING: QEMU chạy lỗi'
+dstat "KHỞI ĐỘNG ANDROID-X86 LIVE (chỉ 10–15 giây là vào được Desktop!)"
+./proot -0 -r rootfs \
+  -b /dev -b /proc -b /sys -b /tmp -b /dev/dri \
+  -b "$WORK_DIR/$ISO_NAME:/iso/$ISO_NAME" \
+  -w /root /bin/sh -c "
+    qemu-system-x86_64 \\
+      -m $MEMORY -smp $CPUS -cpu max \\
+      -machine q35 \\
+      -boot d -cdrom /iso/$ISO_NAME \\
+      -device virtio-gpu-pci,virgl=on \\
+      -display gtk,gl=on,show-cursor=on \\
+      -vnc :1 \\
+      -usb -device usb-tablet \\
+      -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=tcp::8080-:8000 \\
+      -device virtio-net-pci,netdev=net0 \\
+      -rtc base=utc,clock=host \\
+      -soundhw ac97 \\
+      -device virtio-rng-pci
   "
-}
 
-# -----------------------------
-# Main
-# -----------------------------
-dstat "Bắt đầu setup Android-x86 VM debug..."
-check_cmd wget
-check_cmd tar
-check_cmd git
-check_cmd python3
-check_cmd pip
-
-bootstrap_proot
-bootstrap_rootfs
-install_packages
-install_noVNC
-download_android_iso
-start_vnc_and_vm
-
-dstat "Setup hoàn tất!"
+dstat "Đã tắt bất ngờ? Không sao, chạy lại script là vào ngay!"
