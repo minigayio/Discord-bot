@@ -62,7 +62,7 @@ bootstrap_system() {
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
      wget -O bliss.7z https://sourceforge.net/projects/osboxes/files/v/vb/6-BlsOS/v16.9.6-gapps/64bit.7z/download && \
-7z x bliss.7z -y && \"
+7z x bliss.7z -y && \ mv -f /$install_path/BlissOS-16.9.6-gapps-64bit.vdi
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " 🛑 wm shutdown or exiting error try exit or restart "
 
@@ -89,7 +89,7 @@ run_system() {
   # start qemu vm
   d.stat "starting Android VM..."
   d.stat "no password"
-  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25275"-:8000 -drive file=6-BlsOS-16.9.6-gapps-64bit.vdi -usbdevice tablet -display vnc=127.0.0.1:1"                         
+  $DOCKER_RUN qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25275"-:8000 -drive file=6-BliisOS-16.9.6-gapps-64bit.vdi -usbdevice tablet -display vnc=127.0.0.1:1                         
   
   $DOCKER_RUN bash
 }
