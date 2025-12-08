@@ -1,4 +1,4 @@
-  #!/bin/bash
+#!/bin/bash
 # Android-x86 9.0 live session chạy bằng Proot + QEMU + noVNC
 # Với GPU ảo Virtio + 3D acceleration
 # Không cần VirtualGL, tránh lỗi package
