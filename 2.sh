@@ -62,7 +62,7 @@ bootstrap_system() {
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
      wget -O /home/container/android-x86_64-9.0-r2.iso https://sourceforge.net/projects/android-x86/files/latest/download && \ 
- mv /home/container/android-x86_64-9.0-r2.iso /$install_path/home/container/android-x86_64-9.0-r2.iso"
+mv /home/container/android-x86_64-9.0-r2.iso /$install_path/home/container/android-x86_64-9.0-r2.iso"
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " 🛑 wm shutdown or exiting error try exit or restart "
 
