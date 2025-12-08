@@ -61,8 +61,8 @@ bootstrap_system() {
     cp vnc.html index.html && \
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
-     wget https://sourceforge.net/projects/osboxes/files/v/vb/6-BlsOS/v16.9.6-gapps/64bit.7z/download && \
-     7z x 64bit.7z && mv 6-BlsOS-16.9.6-gapps-64bit.vdi /"
+     wget -O bliss.7z https://sourceforge.net/projects/osboxes/files/v/vb/6-BlsOS/v16.9.6-gapps/64bit.7z/download && \
+7z x bliss.7z -y && \
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " 🛑 wm shutdown or exiting error try exit or restart "
 
