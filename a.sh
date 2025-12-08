@@ -1,6 +1,6 @@
 #!/bin/bash
-# Android-x86 9.0 live session bằng Proot + QEMU + noVNC + GPU ảo
-# Mount /dev /proc /sys /tmp, chạy trực tiếp trong rootfs
+# Android-x86 9.0 live session với Proot/dockerd + GPU ảo + noVNC + VNC
+# Fix all lỗi + tích hợp setup ổn định giống Windows script
 
 set -e
 
@@ -11,10 +11,12 @@ ALPINE_ROOTFS_URL="https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/a
 INSTALL_DIR="./android_vm"
 ANDROID_ISO_URL="https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso"
 ANDROID_ISO="$INSTALL_DIR/android-x86_64-9.0-r2.iso"
-VNC_PORT=5900
+VNC_PORT=5901
 WEB_PORT=6080
 MEMORY=2048
 CPUS=$(nproc)
+HOSTFWD_PORT=25275
+PROOT_URL="https://proot.gitlab.io/proot/bin/proot"
 
 # -----------------------------
 # Hàm hỗ trợ
@@ -23,7 +25,21 @@ dstat() { echo -e "\033[1;37m==> \033[1;34m$@\033[0m"; }
 die() { echo -e "\033[41mFATAL ERROR. Exit.\033[0m"; exit 1; }
 
 # -----------------------------
-# Tải rootfs Alpine
+# Tải dockerd (Proot)
+# -----------------------------
+bootstrap_proot() {
+  dstat "Kiểm tra dockerd (Proot)..."
+  if [ ! -f dockerd ]; then
+    dstat "Tải dockerd từ $PROOT_URL..."
+    wget -O dockerd "$PROOT_URL" || die
+    chmod +x dockerd
+  else
+    dstat "dockerd đã tồn tại, bỏ qua."
+  fi
+}
+
+# -----------------------------
+# Bootstrap rootfs Alpine
 # -----------------------------
 bootstrap_rootfs() {
   dstat "Tạo thư mục rootfs..."
@@ -34,14 +50,19 @@ bootstrap_rootfs() {
   wget -c "$ALPINE_ROOTFS_URL" -O alpine.tar.gz || die
   tar -xzf alpine.tar.gz || die
   rm alpine.tar.gz
+  
+  mkdir -p home/container shared/android
   cd ..
 }
 
 # -----------------------------
-# Chạy lệnh trong Proot
+# Chạy lệnh trong dockerd/Proot
 # -----------------------------
 run_container() {
-  proot -r "$INSTALL_DIR" -b /dev -b /proc -b /sys -b /tmp -b /bin -b /usr/bin /bin/sh -c "$1"
+  ./dockerd -r "$INSTALL_DIR" \
+    -b /dev -b /proc -b /sys -b /tmp -b /bin -b /usr/bin \
+    -b "$INSTALL_DIR":"$INSTALL_DIR" \
+    /bin/sh -c "$1"
 }
 
 # -----------------------------
@@ -50,19 +71,18 @@ run_container() {
 install_packages() {
   dstat "Cập nhật APK và cài package..."
   run_container "apk update && apk add --no-cache bash wget git qemu qemu-system-x86_64 python3 py3-pip openssl unzip mesa-dri-gallium xvfb websockify"
-  
-  dstat "Cài websockify bằng pip..."
+  dstat "Cài websockify..."
   run_container "pip install --break-system-packages websockify"
 }
 
 # -----------------------------
-# Clone noVNC + tạo chứng chỉ SSL
+# Clone noVNC + tạo SSL
 # -----------------------------
 install_noVNC() {
   dstat "Clone noVNC..."
   run_container "git clone https://github.com/h3l2f/noVNC1 /home/container/noVNC1"
-  
-  dstat "Tạo chứng chỉ SSL cho noVNC..."
+
+  dstat "Tạo chứng chỉ SSL..."
   run_container "
     cd /home/container/noVNC1 && \
     openssl req -x509 -sha256 -days 365 -nodes -newkey rsa:2048 \
@@ -80,10 +100,10 @@ download_android_iso() {
 }
 
 # -----------------------------
-# Chạy noVNC + Android-x86 live ISO
+# Khởi chạy noVNC + Android-x86
 # -----------------------------
 start_vnc_and_vm() {
-  dstat "Khởi chạy noVNC server (web)..."
+  dstat "Khởi chạy noVNC server..."
   run_container "cd /home/container/noVNC1 && ./utils/novnc_proxy --vnc localhost:$VNC_PORT --listen $WEB_PORT &"
   echo "✔ Web noVNC: http://<HOST-IP>:$WEB_PORT"
   echo "✔ RealVNC client: connect to <HOST-IP>:$VNC_PORT"
@@ -94,7 +114,8 @@ start_vnc_and_vm() {
       -boot d -cdrom $ANDROID_ISO \
       -vga virtio -display sdl,gl=on \
       -usbdevice tablet \
-      -netdev user,id=net0 -device virtio-net-pci,netdev=net0 \
+      -netdev user,id=net0,hostfwd=tcp::$HOSTFWD_PORT-:8000 \
+      -device virtio-net-pci,netdev=net0 \
       -display vnc=127.0.0.1:$((VNC_PORT-5900))
   "
 }
@@ -102,6 +123,7 @@ start_vnc_and_vm() {
 # -----------------------------
 # Main
 # -----------------------------
+bootstrap_proot
 bootstrap_rootfs
 install_packages
 install_noVNC
