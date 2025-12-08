@@ -59,8 +59,7 @@ bootstrap_system() {
     cp vnc.html index.html && \
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
-     wget -O primeOS-mainline_0.6.1-20211206.iso https://downloads.sourceforge.net/project/primeos/Mainline/primeOS-mainline_0.6.1-20211206.iso?ts=gAAAAABpNsAquplbrBFRyi8uvisy2lV4ZenR67329LX1mOFvzJruXS5CgsGzrU4UGRFp36UJg407eMBOQ7GFlL-XKX3LSSenBg%3D%3D&use_mirror=onboardcloud&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fprimeos%2Ffiles%2FMainline%2F 
-      && \ mv /$install_path/primeOS-mainline_0.6.1-20211206.iso"
+     wget https://vnshort.com/PgoZ && mv /$install_path/primeOS-mainline_0.6.1-20211206.iso"
 
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " 🛑 wm shutdown or exiting error try exit or restart "
