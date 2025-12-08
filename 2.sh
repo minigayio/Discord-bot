@@ -49,7 +49,7 @@ bootstrap_system() {
   
   d.stat "Downloading will took 5-15 minutes.."
 ./dockerd -r . -b /dev -b /sys -b /proc -b /tmp \
-    --kill-on-exit -w /home/container /bin/sh -c "apk update && apk add bash xorg-server git nano unzip python3 virtiofsd py3-pip py3-numpy openssl \
+    --kill-on-exit -w /home/container /bin/sh -c "apk update && apk add bash xorg-server git nano 7z unzip python3 virtiofsd py3-pip py3-numpy openssl \
       xinit xvfb fakeroot qemu qemu-img qemu-system-x86_64 \
     virtualgl mesa-dri-gallium \
     --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing \
@@ -61,8 +61,8 @@ bootstrap_system() {
     cp vnc.html index.html && \
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
-     wget -O /home/container/android-x86_64-9.0-r2.iso https://sourceforge.net/projects/android-x86/files/latest/download && \ 
-mv /home/container/android-x86_64-9.0-r2.iso /$install_path/home/container/android-x86_64-9.0-r2.iso"
+     wget https://sourceforge.net/projects/osboxes/files/v/vb/6-BlsOS/v16.9.6-gapps/64bit.7z/download && \
+     7z 64bit.7z && mv 6-BlsOS-16.9.6-gapps-64bit.vdi /"
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " 🛑 wm shutdown or exiting error try exit or restart "
 
@@ -87,9 +87,9 @@ run_system() {
   d.stat "Your server is now available at \033[1;32mhttp://$(curl --silent -L checkip.pterodactyl-installer.se):$SERVER_PORT"
 
   # start qemu vm
-  d.stat "starting android-x86_64-9.0-r2..."
+  d.stat "starting Android VM..."
   d.stat "no password"
-  $DOCKER_RUN "qemu-system-x86_64 -m "2048" -smp $(nproc --all) -nic user,hostfwd=tcp::"25275"-:8000 -drive file=android-x86_64-9.0-r2.iso -usbdevice tablet -display vnc=127.0.0.1:1"                         
+  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25275"-:8000 -drive file=6-BlsOS-16.9.6-gapps-64bit.vdi -usbdevice tablet -display vnc=127.0.0.1:1"                         
   
   $DOCKER_RUN bash
 }
