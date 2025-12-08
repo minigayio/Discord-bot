@@ -61,7 +61,7 @@ bootstrap_system() {
     cp vnc.html index.html && \
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
-     wget -O /home/container/android-x86_64-9.0-r2.iso https://sourceforge.net/projects/android-x86/files/latest/download && \
+     wget https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso?ts=gAAAAABpNkjEvB-dpII7hc5Wdbk6bd1ZYFgVHoPjF5EXwoXdFS1AS5np6wEEISdqG0VmJ0YH6-0AR6Fge9bZuyxvuVa9kA3cKw%3D%3D&use_mirror=onboardcloud&r=https%3A%2F%2Fsourceforge.net%2F -O android-x86_64-9.0-r2.iso && \
 mv /home/container/android-x86_64-9.0-r2.iso /$install_path/home/container/android-x86_64-9.0-r2.iso"
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " 🛑 wm shutdown or exiting error try exit or restart "
