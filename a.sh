@@ -5,7 +5,8 @@
 # -----------------------------
 # Cấu hình
 # -----------------------------
-mirror_alpine="https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-minirootfs-3.22.2-x86_64.tar.gz"
+mirror_alpine_main="http://dl-cdn.alpinelinux.org/alpine/v3.22/main"
+mirror_alpine_community="http://dl-cdn.alpinelinux.org/alpine/v3.22/community"
 mirror_proot="https://proot.gitlab.io/proot/bin/proot"
 install_path="./android_vm"
 android_iso="$install_path/android-x86_64-9.0-r2.iso"
@@ -26,7 +27,8 @@ die() { echo -e "\033[41mFATAL ERROR. Exit.\033[0m"; exit 1; }
 bootstrap() {
   dstat "Tải Alpine rootfs..."
   mkdir -p "$install_path"
-  curl -L "$mirror_alpine" -o "$install_path/alpine.tar.gz" && tar -xf "$install_path/alpine.tar.gz" -C "$install_path" || die
+  curl -L "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-minirootfs-3.22.2-x86_64.tar.gz" -o "$install_path/alpine.tar.gz" || die
+  tar -xf "$install_path/alpine.tar.gz" -C "$install_path" || die
   rm "$install_path/alpine.tar.gz"
 
   dstat "Tải dockerd (Proot)..."
@@ -34,6 +36,10 @@ bootstrap() {
   chmod +x "$install_path/dockerd"
 
   mkdir -p "$install_path/home/container"
+  
+  # Fix DNS/Hosts
+  cp /etc/resolv.conf "$install_path/etc/resolv.conf" -v
+  cp /etc/hosts "$install_path/etc/hosts" -v
 }
 
 # -----------------------------
@@ -50,18 +56,23 @@ run_container_cmd() {
 # Cài noVNC + Websockify + QEMU
 # -----------------------------
 install_inside() {
-  dstat "Cài package cần thiết trong Alpine..."
-  run_container_cmd "apk update && apk add bash qemu qemu-system-x86_64 python3 openssl wget git unzip virtualgl mesa-dri-gallium websockify xvfb"
+  dstat "Cập nhật APK và cài package cần thiết..."
+  run_container_cmd "
+    apk update --repository=$mirror_alpine_main --repository=$mirror_alpine_community && \
+    apk add --no-cache bash wget git qemu qemu-system-x86_64 unzip python3 virtualgl mesa-dri-gallium websockify xvfb
+  " || die
 
   dstat "Clone noVNC..."
-  run_container_cmd "git clone https://github.com/h3l2f/noVNC1 /home/container/noVNC1 && \
+  run_container_cmd "
+    git clone https://github.com/h3l2f/noVNC1 /home/container/noVNC1 && \
     cd /home/container/noVNC1 && \
     openssl req -x509 -sha256 -days 365 -nodes -newkey rsa:2048 \
       -subj '/CN=localhost/C=US/L=Local' -keyout self.key -out self.crt && \
-    cp vnc.html index.html"
+    cp vnc.html index.html
+  " || die
 
   dstat "Tải Android x86 ISO..."
-  run_container_cmd "wget https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso -O $android_iso"
+  run_container_cmd "wget https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso -O $android_iso" || die
 }
 
 # -----------------------------
@@ -69,18 +80,23 @@ install_inside() {
 # -----------------------------
 start_vnc_and_vm() {
   dstat "Khởi chạy noVNC server (web)..."
-  run_container_cmd "cd /home/container/noVNC1 && ./utils/novnc_proxy --vnc localhost:$VNC_PORT --listen $WEB_PORT &"
+  run_container_cmd "
+    cd /home/container/noVNC1 && \
+    ./utils/novnc_proxy --vnc localhost:$VNC_PORT --listen $WEB_PORT &
+  " || die
 
   echo "✔ Web noVNC: http://<HOST-IP>:$WEB_PORT"
   echo "✔ RealVNC client: connect to <HOST-IP>:$VNC_PORT"
 
   dstat "Khởi chạy Android-x86 live ISO với GPU ảo..."
-  run_container_cmd "qemu-system-x86_64 -m $MEMORY -smp $CPUS \
-    -boot d -cdrom $android_iso \
-    -vga virtio -display sdl,gl=on \
-    -usbdevice tablet \
-    -netdev user,id=net0 -device virtio-net-pci,netdev=net0 \
-    -display vnc=127.0.0.1:$((VNC_PORT-5900))"
+  run_container_cmd "
+    qemu-system-x86_64 -m $MEMORY -smp $CPUS \
+      -boot d -cdrom $android_iso \
+      -vga virtio -display sdl,gl=on \
+      -usbdevice tablet \
+      -netdev user,id=net0 -device virtio-net-pci,netdev=net0 \
+      -display vnc=127.0.0.1:$((VNC_PORT-5900))
+  " || die
 }
 
 # -----------------------------
