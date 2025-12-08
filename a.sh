@@ -1,7 +1,7 @@
 #!/bin/bash
 # Android-x86 9.0 live session chạy bằng Proot + QEMU + noVNC
-# Với GPU ảo Virtio + 3D acceleration
-# Không cần VirtualGL, tránh lỗi package
+# GPU ảo Virtio + 3D acceleration
+# Bỏ VirtualGL, cài openssl + pip, fix tất cả lỗi package
 
 # -----------------------------
 # Cấu hình
@@ -60,8 +60,11 @@ install_inside() {
   dstat "Cập nhật APK và cài package cần thiết..."
   run_container_cmd "
     apk update --repository=$mirror_alpine_main --repository=$mirror_alpine_community && \
-    apk add --no-cache bash wget git qemu qemu-system-x86_64 unzip python3 mesa-dri-gallium websockify xvfb
+    apk add --no-cache bash wget git qemu qemu-system-x86_64 unzip python3 py3-pip openssl mesa-dri-gallium websockify xvfb
   " || die
+
+  dstat "Cài websockify bằng pip..."
+  run_container_cmd "pip install --break-system-packages websockify" || die
 
   dstat "Clone noVNC..."
   run_container_cmd "
