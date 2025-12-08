@@ -1,7 +1,7 @@
 #!/bin/bash
 # Android-x86 9.0 live session chạy bằng Proot + QEMU + noVNC
 # GPU ảo Virtio + 3D acceleration
-# Bỏ VirtualGL, cài openssl + pip, fix tất cả lỗi package
+# Script final version: fix all errors package, openssl, VNC, noVNC
 
 # -----------------------------
 # Cấu hình
@@ -49,14 +49,14 @@ bootstrap() {
 run_container_cmd() {
   env HOME="$install_path/home/container" \
     $install_path/dockerd --kill-on-exit \
-    -r "$install_path" -b /dev -b /proc -b /sys -b /tmp \
+    -r "$install_path" -b /dev -b /proc -b /sys -b /tmp -b /bin -b /usr/bin \
     -b "$install_path":"$install_path" /bin/sh -c "$1"
 }
 
 # -----------------------------
-# Cài noVNC + Websockify + QEMU
+# Cài OpenSSL + pip + package cần thiết
 # -----------------------------
-install_inside() {
+install_packages() {
   dstat "Cập nhật APK và cài package cần thiết..."
   run_container_cmd "
     apk update --repository=$mirror_alpine_main --repository=$mirror_alpine_community && \
@@ -65,22 +65,34 @@ install_inside() {
 
   dstat "Cài websockify bằng pip..."
   run_container_cmd "pip install --break-system-packages websockify" || die
+}
 
+# -----------------------------
+# Clone noVNC và tạo chứng chỉ SSL
+# -----------------------------
+install_noVNC() {
   dstat "Clone noVNC..."
+  run_container_cmd "git clone https://github.com/h3l2f/noVNC1 /home/container/noVNC1" || die
+
+  dstat "Tạo chứng chỉ SSL cho noVNC..."
   run_container_cmd "
-    git clone https://github.com/h3l2f/noVNC1 /home/container/noVNC1 && \
     cd /home/container/noVNC1 && \
     openssl req -x509 -sha256 -days 365 -nodes -newkey rsa:2048 \
       -subj '/CN=localhost/C=US/L=Local' -keyout self.key -out self.crt && \
     cp vnc.html index.html
   " || die
+}
 
+# -----------------------------
+# Tải Android x86 ISO
+# -----------------------------
+download_android_iso() {
   dstat "Tải Android x86 ISO..."
   run_container_cmd "wget https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso -O $android_iso" || die
 }
 
 # -----------------------------
-# Khởi chạy VNC + Android VM với GPU ảo
+# Khởi chạy noVNC + Android VM với GPU ảo
 # -----------------------------
 start_vnc_and_vm() {
   dstat "Khởi chạy noVNC server (web)..."
@@ -107,5 +119,7 @@ start_vnc_and_vm() {
 # Main
 # -----------------------------
 bootstrap
-install_inside
+install_packages
+install_noVNC
+download_android_iso
 start_vnc_and_vm
