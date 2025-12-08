@@ -49,7 +49,7 @@ bootstrap_system() {
   
   d.stat "Downloading will took 5-15 minutes.."
 ./dockerd -r . -b /dev -b /sys -b /proc -b /tmp \
-    --kill-on-exit -w /home/container /bin/sh -c "apk update && apk add bash xorg-server git nano 7-zip unzip python3 virtiofsd py3-pip py3-numpy openssl \
+    --kill-on-exit -w /home/container /bin/sh -c "apk update && apk add bash xorg-server git nano p7zip unzip python3 virtiofsd py3-pip py3-numpy openssl \
       xinit xvfb fakeroot qemu qemu-img qemu-system-x86_64 \
     virtualgl mesa-dri-gallium \
     --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing \
