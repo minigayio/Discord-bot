@@ -60,6 +60,7 @@ bootstrap_system() {
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
      install_path="$HOME/cache/$(echo "$HOSTNAME" | md5sum | sed 's+ .*++g')"
+     mkdir -p "$install_path"
      cd "$install_path"
      wget -c https://archive.org/download/prime-os-nougat-last-releases/primeOS-mainline_0.6.1-20211206-k4.19.195.iso -O PrimeOS-Mainline-Android7-0.6.1.iso"
 
