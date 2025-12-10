@@ -63,7 +63,8 @@ bootstrap_system() {
     cp vnc.html index.html && \
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
-     wget -O Arch-Linux-x86_64-basic.qcow2 https://downloads.sourceforge.net/project/arch-vm-base/v0.1/Arch-Linux-x86_64-basic.qcow2?ts=gAAAAABpOPaw2fXs0BPFaGR52ygMtaZbGwPyGhQTXaeIbAhxyw4qao7zPsj3W-GJiS4oXo-5cQq_kFppmDcs8fT1fcixw7PZLg%3D%3D&use_mirror=master&r=https%3A%2F%2Fwww.google.com%2F && mv Arch-Linux-x86_64-basic.qcow2 /"
+     wget -O Arch-Linux-x86_64-basic.qcow2 https://downloads.sourceforge.net/project/arch-vm-base/v0.1/Arch-Linux-x86_64-basic.qcow2?ts=gAAAAABpOPaw2fXs0BPFaGR52ygMtaZbGwPyGhQTXaeIbAhxyw4qao7zPsj3W-GJiS4oXo-5cQq_kFppmDcs8fT1fcixw7PZLg%3D%3D&use_mirror=master&r=https%3A%2F%2Fwww.google.com%2F && 
+  / mv Arch-Linux-x86_64-basic.qcow2 /"
 
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " ðŸ›‘ wm shutdown or exiting error try exit or restart "
