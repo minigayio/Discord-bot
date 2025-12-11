@@ -91,7 +91,7 @@ run_system() {
   # start qemu vm
   d.stat "starting windows 11..."
   d.stat "password: admin"
-  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25146"-:3389 -drive file=windows11.qcow2 -display vnc=127.0.0.1:1"                         
+  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25146"-:3389 -drive file=windows11.qcow2 -device virtio-tablet-pci -display vnc=127.0.0.1:1"                         
   
   $DOCKER_RUN bash
 }
