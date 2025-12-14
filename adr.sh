@@ -91,7 +91,7 @@ run_system() {
   # start qemu vm
   d.stat "starting Debian NoCloud..."
   d.stat "Congratulations!"
-  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -cpu EPYC-Milan -nic user,hostfwd=tcp::"25076"-:3389 -drive file=android-x86_64-9.0-r2-k49.iso -drive file=fat:rw:/home/container/shared -usbdevice tablet -display vnc=127.0.0.1:1, -vga std"                         
+  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -cpu EPYC-Milan -nic user,hostfwd=tcp::"25076"-:3389 -drive file=android-x86_64-9.0-r2-k49.iso -usbdevice tablet -display vnc=127.0.0.1:1, -vga std"                         
   
   $DOCKER_RUN bash
 }
