@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # System Configuration
@@ -81,8 +80,8 @@ bootstrap_system() {
   cd noVNC1 && \
   ln -s /usr/bin/fakeroot /usr/bin/sudo && \
   pip install websockify --break-system-packages && \
-  wget https://cdn.lememhost.cloud/windows10.zip && \
-  unzip windows10.zip && mv windows10.qcow2 / && rm -rf windows10.zip && \
+  wget -O  windows10.qcow2 https://cdn.bosd.io.vn/tiny10-x64.qcow2 && \
+  wget https://cdn.bosd.io.vn/OVMF.fd && \
   echo 'change vnc password' > /home/container/qemu_cmd.txt && \
   echo '$user_passwd' > /home/container/vnc_raw_passwd.txt && \
   cat /home/container/vnc_raw_passwd.txt >> /home/container/qemu_cmd.txt" || die
@@ -113,7 +112,7 @@ run_system() {
   # start qemu vm
   d.stat "starting windows 11..."
   d.stat "password: admin"
-  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -cpu EPYC-Milan -nic user,hostfwd=tcp::"25146"-:3389 -drive file=windows10.qcow2 -drive file=fat:rw:/home/container/shared -usbdevice tablet -display vnc=127.0.0.1:1,password -monitor stdio < qemu_cmd.txt"                         
+  $DOCKER_RUN "qemu-system-x86_64 -device qemu-xhci -device usb-tablet -device usb-kbd -cpu EPYC-Milan,+sse,+sse2,+sse4.1,+sse4.2,hv-relaxed -smp sockets=1,cores=$(nproc --all),threads=1 -overcommit mem-lock=off -m "4096",slots=2 -drive file=fat:rw:/home/container/shared,format=raw,if=virtio,index=1 -drive file=windows10.qcow2,aio=native,cache.direct=on,if=virtio -device virtio-gpu-pci,xres=1366,yres=768 -device virtio-net-pci,netdev=n0 -netdev user,id=n0,hostfwd=tcp::"25169"-:8080 -boot c -drive file=OVMF.fd,format=raw,readonly=on,if=pflash -device virtio-balloon-pci -device virtio-serial-pci -device virtio-rng-pci -display vnc=0.0.0.1:1,password -monitor stdio < qemu_cmd.txt"                         
   
   $DOCKER_RUN bash
 }
