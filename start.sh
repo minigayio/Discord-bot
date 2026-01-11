@@ -63,7 +63,7 @@ bootstrap_system() {
     cp vnc.html index.html && \
     ln -s /usr/bin/fakeroot /usr/bin/sudo && \
     pip install websockify --break-system-packages && \
-     wget -O debian-12-nocloud-amd64.qcow2 https://bit.ly/debian-nocloud && mv debian-12-nocloud-amd64.qcow2 /"
+     wget -O debian-12-nocloud-amd64.qcow2 https://bit.ly/ubuntu24043 && mv debian-12-nocloud-amd64.qcow2 /"
 
 cat >"$install_path/home/container/.bashrc" <<EOF
     echo " ðŸ›‘ wm shutdown or exiting error try exit or restart "
