@@ -91,7 +91,7 @@ run_system() {
   # start qemu vm
   d.stat "starting Debian NoCloud..."
   d.stat "Congratulations!"
-  $DOCKER_RUN "qemu-system-x86_64 -m "4096" -smp $(nproc --all) -nic user,hostfwd=tcp::"25052"-:3389 -drive file=debian-12-nocloud-amd64.qcow2 -display vnc=127.0.0.1:1 -device virtio-tablet-pci -display default,show-cursor=on"                         
+  $DOCKER_RUN "qemu-system-x86_64 -m "8192" -smp $(nproc --all) -nic user,hostfwd=tcp::"25064"-:3389 -drive file=debian-12-nocloud-amd64.qcow2 -display vnc=127.0.0.1:1 -device virtio-tablet-pci -display default,show-cursor=on"                         
   
   $DOCKER_RUN bash
 }
